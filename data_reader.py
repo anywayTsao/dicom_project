@@ -71,8 +71,13 @@ def read_xml(folder: str):
         print(os.path.isfile(file_path))
 
 if __name__ == "__main__":
-    dicom_list = read_dicom('../../ntpu_project/DICOM/LIDC-IDRI-0001/')
-    print(dicom_list[68].full_path)
-    print(dicom_list[68].series_instance_uid)
-# read_dicom('../../ntpu_project/DICOM/LIDC-IDRI-0001/')
-# read_xml('../../ntpu_project/DICOM/LIDC-IDRI-0001/')
+    my_dicom = MyDicom('../../ntpu_project/DICOM/LIDC-IDRI-0001/01-01-2000-30178/3000566-03192/000071.dcm')
+    print('SOPInstanceUID = ', my_dicom.SOPInstanceUID)
+    # my_dicom.plot()
+    # dicom_list = read_dicom('../../ntpu_project/DICOM/LIDC-IDRI-0001/')
+    # for dicom in dicom_list:
+    #     if dicom.SOPInstanceUID == '1.3.6.1.4.1.14519.5.2.1.6279.6001.110383487652933113465768208719':
+    #         print('found =>>> full_path = ', dicom.full_path)
+    #         print('found =>>> SOPInstanceUID = ', dicom.SOPInstanceUID)
+    #         print('found =>>> StudyInstanceUID = ', dicom.StudyInstanceUID)
+    #         print('found =>>> series_instance_uid = ', dicom.series_instance_uid)
