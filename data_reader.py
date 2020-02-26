@@ -6,12 +6,12 @@ import pydicom
 import re
 import service.dicom_service as ds
 
-
 from lxml import objectify, etree
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from utils.file_util import deep_scan
 from models.my_dicom import GEMedicalSystemsDicom
+from workflow.data_prepair_workflow import data_prepair_workflow
 # import scipy.ndimageimport
 # import matplotlib.pyplot as plt
 
@@ -122,4 +122,4 @@ if __name__ == "__main__":
     #     print('found =>>> manufacturer = ', dicom.manufacturer)
     # print(i)
     # read_xml('../../ntpu_project/DICOM/LIDC-IDRI-0001/')
-    ds.read_ct_xml_definition()
+    data_prepair_workflow()
