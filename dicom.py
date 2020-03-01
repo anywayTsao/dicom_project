@@ -18,6 +18,9 @@ def namespace(element):
 
 class Dicom:
 
+    # TODO: 
+    # 1. keep image as binary if have ROI definition
+    # 2. normalize the DICOM 
     def __init__(self, full_path: str):
         self.full_path = full_path
         self.directory = '/'.join(full_path.split('/')[:-1]) + '/'

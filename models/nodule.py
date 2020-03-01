@@ -1,5 +1,4 @@
 from utils.file_util import deep_scan
-from models.dicom import Dicom
 from utils.enum import Modality, Manufacturer, NoduleType
 from lxml import objectify, etree
 
