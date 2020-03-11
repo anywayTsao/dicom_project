@@ -18,8 +18,8 @@ class Nodule:
         self.z_position = roi.find(f'{ns}imageZposition').text
         self.image_uid = roi.find(f'{ns}imageSOP_UID').text
         inclusion_element = roi.find(f'{ns}inclusion')
-        if inclusion_element:
-            self.inclusion = roi.find(f'{ns}inclusion').text
+        if inclusion_element is not None:
+            self.inclusion = inclusion_element.text
         else:
             self.inclusion = None
         edge_map_element_list = roi.findall(f'{ns}edgeMap')
@@ -51,5 +51,5 @@ class Nodule:
         # print(self)
         
     def __repr__(self):
-        return f'<Nodule(image_uid = {self.image_uid}, z_position = {self.z_position}, type = {self.type.value}, len(edge_map_list) = {len(self.edge_map_list)})>'
+        return f'<Nodule(image_uid={self.image_uid}, z_position={self.z_position}, type={self.type.value}, inclusion={self.inclusion}, len(edge_map_list)={len(self.edge_map_list)})>'
     

@@ -32,5 +32,6 @@ class XmlDefinitionWorker(threading.Thread):
                     if definition.image_uid == ct_dicom.SOP_Instance_UID:
                         ct_dicom.add_nodule_list(definition)
                 if len(ct_dicom.nodule_list) > 0:
+                    ct_dicom.check_examination_result()
                     self.mapped_ct_dicom_list.append(ct_dicom)
 
