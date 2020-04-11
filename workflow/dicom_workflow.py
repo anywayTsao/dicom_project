@@ -68,3 +68,16 @@ def describe():
     print(f' NODULE_GREATER_THAN_3MM count = {count_type_1}')
     print(f' NODULE_LESS_THAN_3MM count = {count_type_2}')
     print(f' NON_NODULE_GREATER_THAN_3MM count = {count_type_3}')
+
+def run():
+    global dicom_directory
+    global definition_list
+    global mapped_ct_dicom_list
+    global total_ct_dicom_count
+
+    dicom_directory = []
+    definition_list = []
+    total_ct_dicom_count = 0
+    mapped_ct_dicom_list = []  # this is the final data we want to analysis
+    get_directory()
+    get_prepair_data()

@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import re
 
 from utils.file_util import deep_scan
+from utils.enum import NoduleType
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from models.nodule import Nodule
@@ -34,7 +35,7 @@ class Dicom:
         # self.rescale_intercept = dataset.RescaleIntercept
         # self.rescale_slope = dataset.RescaleSlope
 
-        # self.pixel_list = dataset.pixel_array
+        self.pixel_array = dataset.pixel_array
         # self.pixel_hu_list = self.get_pixels_hu(dataset)
 
         # examination result in XML file
@@ -52,19 +53,33 @@ class Dicom:
         """
         first_edge = None
         first_nodule_type = None
+        has_only_one_result = True
         for i, nodule in enumerate(self.nodule_list):
             if i == 0:
                 first_edge = nodule.edge_map_list[0]
                 first_nodule_type = nodule.type.value
             else:
+                has_only_one_result = False
                 edge = nodule.edge_map_list[0]
                 distance = ((int(first_edge.x) - int(edge.x))**2 + (int(first_edge.y) - int(edge.y))**2) ** 0.5
                 nodule_type = nodule.type.value
-                if nodule_type != first_nodule_type:
+                if nodule_type not in [NoduleType.NODULE_GREATER_THAN_3MM.value]:
+                    print(f'{self.SOP_Instance_UID} nodule_type NODULE_GREATER_THAN_3MM')
                     self.is_same_examination_result = False
-                elif distance >= 10:
+                    return
+                elif nodule_type != first_nodule_type:
+                    print(f'{self.SOP_Instance_UID} nodule_type not same, {first_nodule_type} != {nodule_type}')
                     self.is_same_examination_result = False
-                
+                    return
+                elif distance >= 30:
+                    print(f'{self.SOP_Instance_UID} distance >= 30, ({first_edge.x}, {first_edge.y}) & ({edge.x}, {edge.y})')
+                    self.is_same_examination_result = False
+                    return
+        if has_only_one_result:
+            self.is_same_examination_result = False
+            print('has_only_one_result')
+            return
+        print(f'same result!!!!!!!!!!!')
 
     # TODO: it seems not correct...
     # https://www.kaggle.com/gzuidhof/full-preprocessing-tutorial
