@@ -115,6 +115,7 @@ class Dicom:
 
     # TODO: it seems not correct...
     # https://www.kaggle.com/gzuidhof/full-preprocessing-tutorial
+    # https://vincentblog.xyz/posts/medical-images-in-python-computed-tomography
     def get_pixels_hu(self): 
         
         image = np.stack([self.pixel_array])
