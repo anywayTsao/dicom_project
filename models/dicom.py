@@ -5,6 +5,7 @@ import pydicom
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 import re
+import cv2
 
 from utils.file_util import deep_scan
 from utils.enum import NoduleType
@@ -16,6 +17,23 @@ def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
     return m.group(0) if m else ''
 
+kernel_x = np.array([
+    [-1, -4, -6, -4, -1],
+    [-2, -8, -12, -8, -2],
+    [0, 0, 0, 0, 0],
+    [2, 8, 12, 8, 2],
+    [1, 4, 6, 4, 1],
+])
+
+kernel_y = np.array([
+    [1, 2, 0, -2, -1],
+    [4, 8, 0, -8, -4],
+    [6, 12, 0, -12, -6],
+    [4, 8, 0, -8, -4],
+    [1, 2, 0, -2, -1],
+    
+])
+ 
 
 class Dicom:
 
@@ -32,10 +50,12 @@ class Dicom:
         self.manufacturer = dataset.Manufacturer
         self.modality = dataset.Modality
         self.SOP_Instance_UID = dataset.SOPInstanceUID
-        # self.rescale_intercept = dataset.RescaleIntercept
-        # self.rescale_slope = dataset.RescaleSlope
+        self.rescale_intercept = dataset.RescaleIntercept
+        self.rescale_slope = dataset.RescaleSlope
 
         self.pixel_array = dataset.pixel_array
+        self.sobel_x = None
+        self.sobel_y = None
         # self.pixel_hu_list = self.get_pixels_hu(dataset)
 
         # examination result in XML file
@@ -53,15 +73,22 @@ class Dicom:
         """
         first_edge = None
         first_nodule_type = None
+        first_center_x = None
+        first_center_y = None
         has_only_one_result = True
         for i, nodule in enumerate(self.nodule_list):
             if i == 0:
-                first_edge = nodule.edge_map_list[0]
+                first_center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                first_center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                # first_edge = nodule.edge_map_list[0]
                 first_nodule_type = nodule.type.value
             else:
+                center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 has_only_one_result = False
                 edge = nodule.edge_map_list[0]
-                distance = ((int(first_edge.x) - int(edge.x))**2 + (int(first_edge.y) - int(edge.y))**2) ** 0.5
+                # distance = ((int(first_edge.x) - int(edge.x))**2 + (int(first_edge.y) - int(edge.y))**2) ** 0.5
+                distance = ((int(first_center_x) - int(center_x))**2 + (int(first_center_y) - int(center_y))**2) ** 0.5
                 nodule_type = nodule.type.value
                 if nodule_type not in [NoduleType.NODULE_GREATER_THAN_3MM.value]:
                     print(f'{self.SOP_Instance_UID} nodule_type NODULE_GREATER_THAN_3MM')
@@ -71,8 +98,9 @@ class Dicom:
                     print(f'{self.SOP_Instance_UID} nodule_type not same, {first_nodule_type} != {nodule_type}')
                     self.is_same_examination_result = False
                     return
-                elif distance >= 30:
-                    print(f'{self.SOP_Instance_UID} distance >= 30, ({first_edge.x}, {first_edge.y}) & ({edge.x}, {edge.y})')
+                elif distance >= 5:
+                    # print(f'{self.SOP_Instance_UID} distance >= 5, ({first_edge.x}, {first_edge.y}) & ({edge.x}, {edge.y})')
+                    print(f'{self.SOP_Instance_UID} distance >= 5, ({first_center_x}, {first_center_y}) & ({center_x}, {center_y})')
                     self.is_same_examination_result = False
                     return
         if has_only_one_result:
@@ -80,12 +108,16 @@ class Dicom:
             print('has_only_one_result')
             return
         print(f'same result!!!!!!!!!!!')
+        
+        self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
+        self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
+
 
     # TODO: it seems not correct...
     # https://www.kaggle.com/gzuidhof/full-preprocessing-tutorial
-    def get_pixels_hu(self, slice): 
+    def get_pixels_hu(self): 
         
-        image = np.stack([slice.pixel_array])
+        image = np.stack([self.pixel_array])
         # Convert to int32, 
         image = image.astype(np.int32)
 
@@ -99,10 +131,10 @@ class Dicom:
         slope = self.rescale_slope
         
         if slope != 1:
-            image[0] = slope * image[0].astype(np.float64)
-            image[0] = image[0].astype(np.int32)
+            image = slope * image.astype(np.float64)
+            image = image.astype(np.int32)
 
-        image[0] += np.int32(intercept)
+        image += np.int32(intercept)
         
         return np.array(image, dtype=np.int32)
 
@@ -119,9 +151,9 @@ class Dicom:
         plt.ylabel("Frequency")
         plt.show()
 
-    def plot_ct(self):
+    def plot(self, pixel_array):
         # Show some slice in the middle
-        plt.imshow(self.pixel_list, cmap=plt.cm.gray)
+        plt.imshow(pixel_array, cmap=plt.cm.gray)
         plt.show()
 
         # Show some slice in the middle
