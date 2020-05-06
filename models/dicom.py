@@ -116,15 +116,11 @@ class Dicom:
     # TODO: it seems not correct...
     # https://www.kaggle.com/gzuidhof/full-preprocessing-tutorial
     # https://vincentblog.xyz/posts/medical-images-in-python-computed-tomography
-    def get_pixels_hu(self): 
+    def get_hu_pixels(self): 
         
         image = np.stack([self.pixel_array])
         # Convert to int32, 
         image = image.astype(np.int32)
-
-        # Set outside-of-scan pixels to 0
-        # The intercept is usually -1024, so air is approximately 0
-        image[image == -2000] = 0
         
         # Convert to Hounsfield units (HU)
         # HU = pixel_val * slope + intercept
@@ -136,8 +132,14 @@ class Dicom:
             image = image.astype(np.int32)
 
         image += np.int32(intercept)
-        
-        return np.array(image, dtype=np.int32)
+        image = np.reshape(image, (512, 512))
+
+        # TODO: windowing the lung node part
+        image[image < -1024] = -2048
+        image[image > 200] = -2048
+        image[image < -700] = -2048
+
+        return image
 
     def plot_hu_freqency(self):
         plt.hist(self.pixel_list.flatten(), bins=80, color='c')
@@ -165,4 +167,14 @@ class Dicom:
         NotImplemented
 
     def standardlize(self):
-        NotImplemented
+        
+        image = self.get_hu_pixels()
+        # Convert to int32, 
+        image = image.astype(np.int32)
+        
+        max = np.max(image)
+        min = np.min(image)
+
+        image = (image - min) / (max - min)
+        
+        return image
