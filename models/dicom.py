@@ -1,5 +1,4 @@
 import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
 import pydicom
 import xml.dom.minidom
@@ -12,6 +11,7 @@ from utils.enum import NoduleType
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from models.nodule import Nodule
+from utils.enum import Modality, Manufacturer
 
 def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
@@ -46,21 +46,23 @@ class Dicom:
         self.full_path = full_path
         self.directory = '/'.join(full_path.split('/')[:-1]) + '/'
         dataset = pydicom.dcmread(full_path)
-        self.patient_id = dataset.PatientID
         self.manufacturer = dataset.Manufacturer
+        if self.manufacturer != Manufacturer.GE_MEDICAL_SYSTEMS.value:
+            return
         self.modality = dataset.Modality
+        self.patient_id = dataset.PatientID
         self.SOP_Instance_UID = dataset.SOPInstanceUID
         self.rescale_intercept = dataset.RescaleIntercept
         self.rescale_slope = dataset.RescaleSlope
 
-        self.pixel_array = dataset.pixel_array
-        self.sobel_x = None
-        self.sobel_y = None
+        self.pixel_array = cv2.resize(dataset.pixel_array, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
+        # self.sobel_x = None
+        # self.sobel_y = None
         # self.pixel_hu_list = self.get_pixels_hu(dataset)
 
         # examination result in XML file
         self.nodule_list = []
-        self.is_same_examination_result = True
+        self.is_same_examination_result = False
         # print(dataset)
         # print(self.SOP_Instance_UID)
 
@@ -78,6 +80,7 @@ class Dicom:
         has_only_one_result = True
         for i, nodule in enumerate(self.nodule_list):
             if i == 0:
+                self.is_same_examination_result = True
                 first_center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 first_center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 # first_edge = nodule.edge_map_list[0]
@@ -109,8 +112,8 @@ class Dicom:
             return
         print(f'same result!!!!!!!!!!!')
         
-        self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
-        self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
+        # self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
+        # self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
 
 
     # TODO: it seems not correct...
@@ -161,7 +164,7 @@ class Dicom:
 
     def standardlize(self):
         
-        image = self.get_hu_pixels()
+        image = self.transform_to_hu()
         # Convert to int32, 
         image = image.astype(np.int32)
         

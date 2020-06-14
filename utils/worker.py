@@ -12,7 +12,9 @@ class XmlDefinitionWorker(threading.Thread):
         self.my_list = my_list
         self.num = num
         self.definition_list = []
-        self.mapped_ct_dicom_list = []
+        self.mapped_ct_dicom_list = []  # 驗片結果一致的 CT
+        self.mapped_ct_dicom_list_unmatched = []  # 驗片結果不一致的 CT
+        self.un_mapped_ct_dicom_list = []  # 無驗片結果的 CT
         self.total_ct_dicom_count = 0
 
     def run(self):
@@ -33,5 +35,10 @@ class XmlDefinitionWorker(threading.Thread):
                         ct_dicom.add_nodule_list(definition)
                 if len(ct_dicom.nodule_list) > 0:
                     ct_dicom.check_examination_result()
-                    self.mapped_ct_dicom_list.append(ct_dicom)
+                    if ct_dicom.is_same_examination_result:
+                        self.mapped_ct_dicom_list.append(ct_dicom)
+                    else:
+                        self.mapped_ct_dicom_list_unmatched.append(ct_dicom)
+                else:
+                    self.un_mapped_ct_dicom_list.append(ct_dicom)
 

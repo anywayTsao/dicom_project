@@ -50,6 +50,14 @@ def get_prepair_data() -> []:
     mapped_ct_dicom_list.extend(my_worker2.mapped_ct_dicom_list)
     mapped_ct_dicom_list.extend(my_worker3.mapped_ct_dicom_list)
     mapped_ct_dicom_list.extend(my_worker4.mapped_ct_dicom_list)
+    mapped_ct_dicom_list_unmatched.extend(my_worker1.mapped_ct_dicom_list_unmatched)
+    mapped_ct_dicom_list_unmatched.extend(my_worker2.mapped_ct_dicom_list_unmatched)
+    mapped_ct_dicom_list_unmatched.extend(my_worker3.mapped_ct_dicom_list_unmatched)
+    mapped_ct_dicom_list_unmatched.extend(my_worker4.mapped_ct_dicom_list_unmatched)
+    un_mapped_ct_dicom_list.extend(my_worker1.un_mapped_ct_dicom_list)
+    un_mapped_ct_dicom_list.extend(my_worker2.un_mapped_ct_dicom_list)
+    un_mapped_ct_dicom_list.extend(my_worker3.un_mapped_ct_dicom_list)
+    un_mapped_ct_dicom_list.extend(my_worker4.un_mapped_ct_dicom_list)
 
 def describe():
     global mapped_ct_dicom_list
@@ -73,11 +81,15 @@ def run():
     global dicom_directory
     global definition_list
     global mapped_ct_dicom_list
+    global mapped_ct_dicom_list_unmatched
+    global un_mapped_ct_dicom_list
     global total_ct_dicom_count
 
     dicom_directory = []
     definition_list = []
     total_ct_dicom_count = 0
     mapped_ct_dicom_list = []  # this is the final data we want to analysis
+    un_mapped_ct_dicom_list = []  # this is the final data we want to analysis
+    mapped_ct_dicom_list_unmatched = []
     get_directory()
     get_prepair_data()
