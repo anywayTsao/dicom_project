@@ -62,7 +62,8 @@ class Dicom:
 
         # examination result in XML file
         self.nodule_list = []
-        self.is_same_examination_result = False
+        self.is_same_examination_result = True
+        self.has_nodule = False
         # print(dataset)
         # print(self.SOP_Instance_UID)
 
@@ -80,7 +81,7 @@ class Dicom:
         has_only_one_result = True
         for i, nodule in enumerate(self.nodule_list):
             if i == 0:
-                self.is_same_examination_result = True
+                self.has_nodule = True
                 first_center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 first_center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 # first_edge = nodule.edge_map_list[0]
