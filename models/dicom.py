@@ -63,8 +63,8 @@ class Dicom:
         self.is_same_examination_result = True
         self.nodule_type = None
 
-        self.pixel_array = None
-        self.pixel_array = cv2.resize(dataset.pixel_array, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
+        self.pixel_array = dataset.pixel_array
+        # self.pixel_array = cv2.resize(dataset.pixel_array, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
         # print(dataset)
         # print(self.SOP_Instance_UID)
 
@@ -80,24 +80,21 @@ class Dicom:
         first_center_x = None
         first_center_y = None
         has_only_one_result = True
-        type0 = 0
-        type1 = 0
-        type2 = 0
+        is_same_examination_result = True
         for i, nodule in enumerate(self.nodule_list):
             if i == 0:
                 first_center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 first_center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 # first_edge = nodule.edge_map_list[0]
+                self.nodule_type = nodule.type.value
                 first_nodule_type = nodule.type.value
+                print(f'first_nodule_type = {first_nodule_type}')
 
                 if self.nodule_type == NoduleType.NODULE_GREATER_THAN_3MM.value:
-                    type2 += 1
                     print(f'NODULE_GREATER_THAN_3MM')
                 elif self.nodule_type == NoduleType.NODULE_LESS_THAN_3MM.value:
-                    type1 += 1
                     print(f'NODULE_LESS_THAN_3MM')
                 elif self.nodule_type == NoduleType.NON_NODULE_GREATER_THAN_3MM.value:
-                    type0 += 1
                     print(f'NON_NODULE_GREATER_THAN_3MM')
             else:
                 center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
@@ -106,31 +103,32 @@ class Dicom:
                 edge = nodule.edge_map_list[0]
                 # distance = ((int(first_edge.x) - int(edge.x))**2 + (int(first_edge.y) - int(edge.y))**2) ** 0.5
                 distance = ((int(first_center_x) - int(center_x))**2 + (int(first_center_y) - int(center_y))**2) ** 0.5
-                self.nodule_type = nodule.type.value
 
-                if self.nodule_type == NoduleType.NODULE_GREATER_THAN_3MM.value:
-                    type2 += 1
-                    # print(f'NODULE_GREATER_THAN_3MM')
-                elif self.nodule_type == NoduleType.NODULE_LESS_THAN_3MM.value:
-                    type1 += 1
-                    # print(f'NODULE_LESS_THAN_3MM')
-                elif self.nodule_type == NoduleType.NON_NODULE_GREATER_THAN_3MM.value:
-                    type0 += 1
-                    # print(f'NON_NODULE_GREATER_THAN_3MM')
+                # if self.nodule_type == NoduleType.NODULE_GREATER_THAN_3MM.value:
+                #     # print(f'NODULE_GREATER_THAN_3MM')
+                # elif self.nodule_type == NoduleType.NODULE_LESS_THAN_3MM.value:
+                #     # print(f'NODULE_LESS_THAN_3MM')
+                # elif self.nodule_type == NoduleType.NON_NODULE_GREATER_THAN_3MM.value:
+                #     # print(f'NON_NODULE_GREATER_THAN_3MM')
 
-                if self.nodule_type != first_nodule_type:
-                    print(f'{self.SOP_Instance_UID} nodule_type not same, {first_nodule_type} != {self.nodule_type}')
-                    self.nodule_type = 999
+                if self.nodule_type != nodule.type.value:
+                    print(f'{self.SOP_Instance_UID} nodule_type not same, {nodule.type.value} != {self.nodule_type}')
                     self.is_same_examination_result = False
-                elif distance >= 5:
                     self.nodule_type = 999
-                    # print(f'{self.SOP_Instance_UID} distance >= 5, ({first_edge.x}, {first_edge.y}) & ({edge.x}, {edge.y})')
-                    # print(f'{self.SOP_Instance_UID} distance >= 5, ({first_center_x}, {first_center_y}) & ({center_x}, {center_y})')
+                elif distance >= 10:
+                    print(f'{self.SOP_Instance_UID} distance >= 5, ({first_center_x}, {first_center_y}) & ({center_x}, {center_y})')
                     self.is_same_examination_result = False
-                    
-        if has_only_one_result:
-            self.is_same_examination_result = False
+                    self.nodule_type = 999
 
+        if len(self.nodule_list) == 0:
+            self.nodule_type = None  # not mapped dicom
+
+        if len(self.nodule_list) == 1:
+            self.nodule_type = 999  # not same dicom
+            
+        if self.nodule_type == 999 or self.nodule_type is None:
+            self.pixel_array = None 
+            pass
         # self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
         # self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
 
@@ -179,15 +177,13 @@ class Dicom:
     def reshape(self):
         NotImplemented
 
-    def standardlize(self):
-        
-        image = self.window_image(50, 350)
-        # Convert to int32, 
-        image = image.astype(np.int32)
-        
-        max = np.max(image)
-        min = np.min(image)
+def standardlize(self, input_image):
+    
+    image = input_image.astype(np.int32)
+    
+    max = np.max(image)
+    min = np.min(image)
 
-        image = (image - min) / (max - min)
-        
-        return image
+    image = (image - min) / (max - min)
+    
+    return image

@@ -48,9 +48,9 @@ class XmlDefinitionWorker(threading.Thread):
                 elif ct_dicom.nodule_type in [1]:
                     self.small_nodule_ct_dicom_list.append(ct_dicom)
                 elif ct_dicom.nodule_type in [0]:
-                    self.not_same_ct_dicom_list.append(ct_dicom)
-                elif ct_dicom.nodule_type in [999]:
                     self.non_nodule_ct_dicom_list.append(ct_dicom)
+                elif ct_dicom.nodule_type in [999]:
+                    self.not_same_ct_dicom_list.append(ct_dicom)
                 else:
                     self.not_mapped_ct_dicom_list.append(ct_dicom)
                 
