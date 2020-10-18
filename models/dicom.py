@@ -81,10 +81,12 @@ class Dicom:
         first_center_y = None
         has_only_one_result = True
         is_same_examination_result = True
+        roi_list = list()
         for i, nodule in enumerate(self.nodule_list):
+            roi_list.append(nodule.roi_set)
             if i == 0:
-                first_center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
-                first_center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                first_center_x = np.sum([int(edge[0]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                first_center_y = np.sum([int(edge[1]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 # first_edge = nodule.edge_map_list[0]
                 self.nodule_type = nodule.type.value
                 first_nodule_type = nodule.type.value
@@ -97,19 +99,12 @@ class Dicom:
                 elif self.nodule_type == NoduleType.NON_NODULE_GREATER_THAN_3MM.value:
                     print(f'NON_NODULE_GREATER_THAN_3MM')
             else:
-                center_x = np.sum([int(edge.x) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
-                center_y = np.sum([int(edge.y) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                center_x = np.sum([int(edge[0]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
+                center_y = np.sum([int(edge[1]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 has_only_one_result = False
                 edge = nodule.edge_map_list[0]
                 # distance = ((int(first_edge.x) - int(edge.x))**2 + (int(first_edge.y) - int(edge.y))**2) ** 0.5
                 distance = ((int(first_center_x) - int(center_x))**2 + (int(first_center_y) - int(center_y))**2) ** 0.5
-
-                # if self.nodule_type == NoduleType.NODULE_GREATER_THAN_3MM.value:
-                #     # print(f'NODULE_GREATER_THAN_3MM')
-                # elif self.nodule_type == NoduleType.NODULE_LESS_THAN_3MM.value:
-                #     # print(f'NODULE_LESS_THAN_3MM')
-                # elif self.nodule_type == NoduleType.NON_NODULE_GREATER_THAN_3MM.value:
-                #     # print(f'NON_NODULE_GREATER_THAN_3MM')
 
                 if self.nodule_type != nodule.type.value:
                     print(f'{self.SOP_Instance_UID} nodule_type not same, {nodule.type.value} != {self.nodule_type}')
@@ -129,6 +124,8 @@ class Dicom:
         if self.nodule_type == 999 or self.nodule_type is None:
             self.pixel_array = None 
             pass
+        else:
+            print('common_rate = {inspect_roi(roi_list).get('common_rate')}')
         # self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
         # self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
 
@@ -152,7 +149,7 @@ class Dicom:
         
         return window_image
 
-    def plot_hu_freqency(self):
+    def plot_hu_frequency(self):
         plt.hist(self.pixel_list.flatten(), bins=80, color='c')
         plt.title(self.patient_id)
         plt.xlabel("(Before) Hounsfield Units (HU)")
@@ -187,3 +184,28 @@ def standardlize(self, input_image):
     image = (image - min) / (max - min)
     
     return image
+
+
+def inspect_roi(roi_list: list) -> dict:
+    """
+    set 的操作：https://wenyuangg.github.io/posts/python3/python-set.html
+    回傳 input_area_list 裡面所有的 (交集面積/聯集面積)
+    """
+    union = set()
+    intersection = set()
+    for area in roi_list:
+        union = union | area
+    intersection = union
+    for area in roi_list:
+        intersection = intersection & area
+    try:
+        common_rate = len(intersection) / len(union)
+    except ZeroDivisionError as e:
+        common_rate = 0.0
+    return {
+        'union_roi': union,
+        'intersection_roi': intersection,
+        'union_area': len(union),
+        'intersection_area': len(intersection),
+        'common_rate': common_rate
+    }
