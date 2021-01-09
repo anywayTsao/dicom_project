@@ -1,17 +1,14 @@
-import numpy as np # linear algebra
-import os
-import pydicom
-import xml.dom.minidom
-import xml.etree.ElementTree as ET
 import re
-import cv2
 
-from utils.file_util import deep_scan
-from utils.enum import NoduleType
+import numpy as np  # linear algebra
+import pydicom
 from matplotlib import pyplot as plt
-from matplotlib import cm
+from shapely.geometry import Polygon
+
 from models.nodule import Nodule
-from utils.enum import Modality, Manufacturer
+from utils.enum import Manufacturer
+from utils.enum import NoduleType
+
 
 def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
@@ -64,6 +61,7 @@ class Dicom:
         self.nodule_type = None
 
         self.pixel_array = dataset.pixel_array
+        self.inspection = None
         # self.pixel_array = cv2.resize(dataset.pixel_array, dsize=(128, 128), interpolation=cv2.INTER_CUBIC)
         # print(dataset)
         # print(self.SOP_Instance_UID)
@@ -83,7 +81,7 @@ class Dicom:
         is_same_examination_result = True
         roi_list = list()
         for i, nodule in enumerate(self.nodule_list):
-            roi_list.append(nodule.roi_set)
+            # roi_list.append(nodule.roi_set)
             if i == 0:
                 first_center_x = np.sum([int(edge[0]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
                 first_center_y = np.sum([int(edge[1]) for edge in nodule.edge_map_list]) / len(nodule.edge_map_list)
@@ -125,7 +123,7 @@ class Dicom:
             self.pixel_array = None 
             pass
         else:
-            print('common_rate = {inspect_roi(roi_list).get('common_rate')}')
+            self.inspection = inspect([nodule.edge_map_list for nodule in self.nodule_list])
         # self.sobel_x = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_x, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
         # self.sobel_y = cv2.filter2D(self.pixel_array, ddepth=-1 , dst=-1, kernel=kernel_y, anchor=(-1, -1), delta=0, borderType=cv2.BORDER_DEFAULT)
 
@@ -186,26 +184,33 @@ def standardlize(self, input_image):
     return image
 
 
-def inspect_roi(roi_list: list) -> dict:
+def inspect(nodule_edge_map_list: list) -> (float, [float], [float]):
+    """ # https://shapely.readthedocs.io/en/stable/manual.html
+    https://stackoverflow.com/questions/57885406/get-the-coordinates-of-two-polygons-intersection-area-in-python?fbclid=IwAR25WL_Kc_U2XiA6X5bIv8IXZ99tiLlL6Z234vEVUAZKNokPqcfX_EJ57_U
+    return
+    union_area: 聯集部分體積
+    intersection_area_list; 交集部分體積
+    cover_rate_list: 交集部分體積 / 聯集部分體積
     """
-    set 的操作：https://wenyuangg.github.io/posts/python3/python-set.html
-    回傳 input_area_list 裡面所有的 (交集面積/聯集面積)
-    """
-    union = set()
-    intersection = set()
-    for area in roi_list:
-        union = union | area
-    intersection = union
-    for area in roi_list:
-        intersection = intersection & area
-    try:
-        common_rate = len(intersection) / len(union)
-    except ZeroDivisionError as e:
-        common_rate = 0.0
-    return {
-        'union_roi': union,
-        'intersection_roi': intersection,
-        'union_area': len(union),
-        'intersection_area': len(intersection),
-        'common_rate': common_rate
-    }
+    print(nodule_edge_map_list)
+    intersection_polygon_list = list()
+    union_polygon = None
+    for edge_map_list in nodule_edge_map_list:
+        if len(edge_map_list) == 1:
+            return 1, 1, 1
+        point_list = edge_map_list
+        polygon = Polygon(point_list)
+        if union_polygon is None:
+            union_polygon = polygon
+        else:
+            union_polygon.union(polygon)
+    for edge_map_list in nodule_edge_map_list:
+        point_list = edge_map_list
+        polygon = Polygon(point_list)
+        intersection_polygon_list.append(union_polygon.intersection(polygon))
+
+    union_area = union_polygon.area
+    intersection_area_list = [intersection_polygon.area for intersection_polygon in intersection_polygon_list]
+    cover_rate_list = [intersection_area/union_area for intersection_area in intersection_area_list]
+    print(union_area, intersection_area_list, cover_rate_list)
+    return union_area, intersection_area_list, cover_rate_list

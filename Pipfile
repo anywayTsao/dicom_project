@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+jupyter = "*"
+tensorflow = "==2.1.0"
+pydicom = "*"
+matplotlib = "*"
+pandas = "*"
+lxml = "*"
+scikit-learn = "*"
+scikit-image = "*"
+shapely = "==1.7.1"
+
+[requires]
+python_version = "3.6"
